@@ -1,0 +1,8 @@
+#!/bin/sh
+
+echo "Removing the plugin from your system ..."
+
+rm -r /usr/lib/enigma2/python/Plugins/Extensions/PiconsMissing > /dev/null 2>&1
+
+exit 0
+

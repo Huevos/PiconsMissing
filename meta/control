@@ -1,0 +1,11 @@
+Package: enigma2-plugin-extensions-missingpicons
+Version: 2022_09_18
+Description: Lists missing picons
+Section:
+Priority: optional
+Maintainer: Huevos and Abu Baniaz 
+Architecture: all
+OE: N/A
+Homepage: http://www.world-of-satellite.com
+Depends: 
+Source: 
