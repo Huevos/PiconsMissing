@@ -1,10 +1,11 @@
 #!/usr/bin/python
 import sys, unicodedata, re, os, glob, zipfile
 from time import strftime
+import json
 
 def missingPicons():
 	sortOrder = []
-	for x in sys.argv[1:]:
+	for x in sys.argv[2:]:
 		try:
 			argVal = int(int(x) - 1)
 			sortOrder.append(argVal)
@@ -16,7 +17,8 @@ def missingPicons():
 		lamedb = tmpLamedb
 	else:
 		lamedb = "/etc/enigma2/lamedb"
-	piconLocations = ["/usr/share/enigma2/picon/", "/picon/", "/media/usb/picon/","/media/usb2/picon/", "/media/hdd/picon/", "/media/hdd2/picon/", "/media/cf/picon/", "/media/sdb/picon/", "/media/sdb2/picon/","/media/sda/picon/",]
+	if not (len(sys.argv) > 1 and (piconLocations := json.loads(sys.argv[1])) and isinstance(piconLocations, list) and piconLocations):
+		piconLocations = ["/usr/share/enigma2/picon/", "/picon/", "/media/usb/picon/","/media/usb2/picon/", "/media/hdd/picon/", "/media/hdd2/picon/", "/media/cf/picon/", "/media/sdb/picon/", "/media/sdb2/picon/","/media/sda/picon/",]
 	outfile = "/tmp/missing-picons" + strftime("_%Y-%m-%d_%H-%M-%S") + ".zip"
 	outlog1 = "found-picons"
 	outlog2 = "missing-picons"
