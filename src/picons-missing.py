@@ -23,6 +23,8 @@ def missingPicons():
 	outlog1 = "found-picons"
 	outlog2 = "missing-picons"
 	outlog3 = "impossible-picons"
+	outlog4 = "utf8-picon-names"
+	outlog5 = "utf8-picon-list"  # not CSV
 	logExt = ".csv"
 	piconOutFolder = "/picon/"
 	messages1 = []
@@ -30,6 +32,8 @@ def missingPicons():
 	messages3 = []
 	#messages = {}
 	messages = []
+	messages4 = []
+	messages5 = []
 	paths = []
 	pattern = "*.png"
 	serviceTypes = []
@@ -74,18 +78,23 @@ def missingPicons():
 		refstr = "1:0:1:%X:%X:%X:%X:0:0:0" % (int(ref[0], 0x10), int(ref[2], 0x10), int(ref[3], 0x10), int(ref[1], 0x10))
 		serviceType = str(hex(int(ref[4]))).replace('0x', '') # just for the log
 		refstr2 = "1:0:%s:%X:%X:%X:%X:0:0:0" % (serviceType, int(ref[0], 0x10), int(ref[2], 0x10), int(ref[3], 0x10), int(ref[1], 0x10)) # just for the log
-		ocram_str = "%X_%X_%X_%X" % (int(ref[0], 0x10), int(ref[2], 0x10), int(ref[3], 0x10), int(ref[1], 0x10))
+		ocram_str = "%X_%X_%X_%X0000" % (int(ref[0], 0x10), int(ref[2], 0x10), int(ref[3], 0x10), int(ref[1], 0x10) >> 16)
 		#ref = f[0][:-1] # service ref string from lamedb
 		oldPiconName = refstr.replace(':','_') + ".png"
 		oldPiconName2 = refstr2.replace(':','_') + ".png"
 		# newName1 = unicodedata.normalize('NFKD', str(name)).encode('ASCII', 'ignore').decode('ASCII', 'ignore')
 		newName1 = sanitizeFilename(name)
+		utf8_name_short = name and newName1 and newName1.lower()
+		utf8_name = utf8_name_short + ".png"
 		newName2 = re.sub("[^a-z0-9]", "", newName1.replace("&", "and").replace("+", "plus").replace("*", "star").lower())
 		newPiconName = newName2  + ".png"
 		if int(ref[4]) < 26: # service type in decimal
-			if (len(newName2) and newPiconName in paths) or oldPiconName in paths or oldPiconName2 in paths:
+			if name and utf8_name != "__.png" and "SID 0x" not in name and not name.isdecimal():
+				messages4.append((name, sat, utf8_name, refstr2))
+				messages5.append((utf8_name_short, ocram_str))
+			if (name and newName2 and newPiconName in paths) or oldPiconName in paths or oldPiconName2 in paths:
 				#found = True
-				if (len(newName2) and newPiconName in paths):
+				if newName2 and newPiconName in paths:
 					foundPiconName = newPiconName
 				elif oldPiconName in paths:
 					foundPiconName = oldPiconName
@@ -101,7 +110,7 @@ def missingPicons():
 				#	messages[sat] = []
 				#messages[sat].append((newName1, newPiconName, refstr2, sat, int(ref[4])))
 				symlink = "ln -s ./%s ./%s" % (newPiconName, oldPiconName2)
-				messages.append((newName1, newPiconName, oldPiconName2, sat, int(ref[4]), ocram_str, symlink))
+				messages.append((name and newName1, newPiconName, oldPiconName2, sat, int(ref[4]), ocram_str, symlink))
 			i += 1
 			if i % 100 == 0:
 				print("Read %i channels... " % (i))
@@ -116,6 +125,7 @@ def missingPicons():
 	messages1 = sortByValue(messages1, 0)
 	#messages2 = sortByValue(messages2, 0)
 	#messages3 = sortByValue(messages3, 2)
+	messages4.sort()
 	
 	messages = sortByValueRecursive(messages, sortOrder)
 	#all = []
@@ -156,23 +166,35 @@ def missingPicons():
 
 # start: edit 1
 	print("write missing")
-	log = 'Channel name,SNP name,SRP name,Orbital,DVB type,Ocram database\n'
+	log = ['Channel name,SNP name,SRP name,Orbital,DVB type,Ocram database\n']
 	for message in messages:
-		log += '"%s","%s","%s","%s",%i,%s\n' % (message[0],message[1][:-4],message[2][:-4], satname(message[3]), message[4], message[5])
+		log.append('"%s","%s","%s","%s",%i,%s\n' % (message[0],message[1][:-4],message[2][:-4], satname(message[3]), message[4], message[5]))
 # end: edit 1
-	zf.writestr(outlog2 + '-all_services' + logExt, log)
+	zf.writestr(outlog2 + '-all_services' + logExt, "".join(log))
 	
 	#found picons... (channel_name, sat, service_ref, picon_name_short, picon_name_full)
 	control_chars = ''.join(map(chr, list(range(0,32)) + list(range(127,160))))
 	control_char_re = re.compile('[%s]' % re.escape(control_chars))
 	print("write found")
-	log = 'Channel name,Orbital,Service ref,Picon name,Picon path\n'
+	log = ['Channel name,Orbital,Service ref,Picon name,Picon path\n']
 	for message in messages1:
-		log += '"%s","%s","%s","%s",%s\n' % (control_char_re.sub('', message[0]),satname(message[1]),message[2], message[3], message[4])
-	zf.writestr(outlog1 + logExt, log)
-		 
-		
-		
+		log.append('"%s","%s","%s","%s",%s\n' % (control_char_re.sub('', message[0]),satname(message[1]),message[2], message[3], message[4]))
+	zf.writestr(outlog1 + logExt, "".join(log))
+
+	print("write UTF8")
+	log = ['Channel name,Orbital,UTF8 picon name,Service ref\n']
+	for message in messages4:
+		log.append('"%s","%s","%s","%s"\n' % (message[0], satname(message[1]), message[2], message[3]))
+	zf.writestr(outlog4 + logExt, "".join(log))
+
+	log = []
+	for message in messages5:
+		log.append('%s=%s\n' % (message[0], message[1]))
+	log.sort(key=lambda x: x.split("=", 1)[0])
+	zf.writestr(outlog5, "".join(log))  # don't use logExt
+	
+
+
 	
 	#print "Writing picons-missing log..."
 	#log = ''
@@ -299,7 +321,7 @@ def sanitizeFilename(filename, maxlen=255):  # 255 is max length in ext4 (and mo
 		"LPT6", "LPT7", "LPT8", "LPT9",
 	]  # Reserved words on Windows
 	# Remove any blacklisted chars. Remove all charcters below code point 32. Normalize. Strip.
-	filename = normalize("NFKD", "".join(c for c in filename if c not in blacklist and ord(c) > 31)).strip()
+	filename = unicodedata.normalize("NFKD", "".join(c for c in filename if c not in blacklist and ord(c) > 31)).strip()
 	if all([x == "." for x in filename]) or filename in reserved:  # if filename is a string of dots
 		filename = "__" + filename
 	# Most Unix file systems typically allow filenames of up to 255 bytes.
@@ -312,7 +334,7 @@ def sanitizeFilename(filename, maxlen=255):  # 255 is max length in ext4 (and mo
 	# ignoring errors along the way, the result will be valid unicode.
 	# Prioritise maintaining the complete extension if possible.
 	# Any truncation of root or ext will be done at the end of the string
-	root, ext = pathSplitext(filename.encode(encoding='utf-8', errors='ignore'))
+	root, ext = os.path.splitext(filename.encode(encoding='utf-8', errors='ignore'))
 	if len(ext) > maxlen - (1 if root else 0):  # leave at least one char for root if root
 		ext = ext[:maxlen - (1 if root else 0)]
 	# convert back to unicode, ignoring any incomplete utf8 multibyte chars
