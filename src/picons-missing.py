@@ -19,6 +19,7 @@ def missingPicons():
 		lamedb = "/etc/enigma2/lamedb"
 	if not (len(sys.argv) > 1 and (piconLocations := json.loads(sys.argv[1])) and isinstance(piconLocations, list) and piconLocations):
 		piconLocations = ["/usr/share/enigma2/picon/", "/picon/", "/media/usb/picon/","/media/usb2/picon/", "/media/hdd/picon/", "/media/hdd2/picon/", "/media/cf/picon/", "/media/sdb/picon/", "/media/sdb2/picon/","/media/sda/picon/",]
+	omit_types = (0,12)
 	outfile = "/tmp/missing-picons" + strftime("_%Y-%m-%d_%H-%M-%S") + ".zip"
 	outlog1 = "found-picons"
 	outlog2 = "missing-picons"
@@ -88,11 +89,13 @@ def missingPicons():
 		utf8_name = utf8_name_short + ".png"
 		newName2 = re.sub("[^a-z0-9]", "", newName1.replace("&", "and").replace("+", "plus").replace("*", "star").lower())
 		newPiconName = newName2  + ".png"
-		if int(ref[4]) < 26: # service type in decimal
-			if name and utf8_name != "__.png" and "SID 0x" not in name and not name.isdecimal():
+		if int(ref[4]) < 26 and int(ref[4]) not in omit_types: # service type in decimal
+			if name and utf8_name != "__.png" and "SID 0x" not in name and not name.replace(".", "").isdecimal():
 				messages4.append((name, sat, utf8_name, refstr2))
 				messages5.append((utf8_name_short, ocram_str))
-			if (name and newName2 and newPiconName in paths) or oldPiconName in paths or oldPiconName2 in paths:
+			else:
+				utf8_name = ""  # utf8 name is not valid so truncate it
+			if (name and newName2 and newPiconName in paths) or oldPiconName in paths or oldPiconName2 in paths or utf8_name and utf8_name in paths:
 				#found = True
 				if newName2 and newPiconName in paths:
 					foundPiconName = newPiconName
@@ -100,6 +103,8 @@ def missingPicons():
 					foundPiconName = oldPiconName
 				elif oldPiconName2 in paths:
 					foundPiconName = oldPiconName2
+				elif utf8_name and utf8_name in paths:
+					foundPiconName = utf8_name
 				# messages1 = [(channel_name, sat, service_ref, picon_name_short, picon_name_full)]
 				messages1.append((name, sat, refstr2, foundPiconName, paths[foundPiconName]))
 			else:
@@ -109,8 +114,9 @@ def missingPicons():
 				#if sat not in messages:
 				#	messages[sat] = []
 				#messages[sat].append((newName1, newPiconName, refstr2, sat, int(ref[4])))
-				symlink = "ln -s ./%s ./%s" % (newPiconName, oldPiconName2)
-				messages.append((name and newName1, newPiconName, oldPiconName2, sat, int(ref[4]), ocram_str, symlink))
+				symlink = newName2 and "ln -s ./%s ./%s" % (newPiconName, oldPiconName2)
+				utf8_symlink = utf8_name and "ln -s ./%s ./%s" % (utf8_name, oldPiconName2)
+				messages.append((name and newName1, newPiconName, oldPiconName2, sat, int(ref[4]), ocram_str, symlink, utf8_name, utf8_symlink))
 			i += 1
 			if i % 100 == 0:
 				print("Read %i channels... " % (i))
@@ -166,9 +172,9 @@ def missingPicons():
 
 # start: edit 1
 	print("write missing")
-	log = ['Channel name,SNP name,SRP name,Orbital,DVB type,Ocram database\n']
+	log = ['Channel name,SNP name,SRP name,Orbital,DVB type,Ocram database,symlink,utf8_name,utf8_symlink\n']
 	for message in messages:
-		log.append('"%s","%s","%s","%s",%i,%s\n' % (message[0],message[1][:-4],message[2][:-4], satname(message[3]), message[4], message[5]))
+		log.append('"%s","%s","%s","%s",%i,%s,%s,%s,%s\n' % (message[0],message[1][:-4],message[2][:-4], satname(message[3]), message[4], message[5], message[6], message[7], message[8]))
 # end: edit 1
 	zf.writestr(outlog2 + '-all_services' + logExt, "".join(log))
 	
