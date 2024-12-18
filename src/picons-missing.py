@@ -172,9 +172,9 @@ def missingPicons():
 
 # start: edit 1
 	print("write missing")
-	log = ['Channel name,SNP name,SRP name,Orbital,DVB type,Ocram database,symlink,utf8_name,utf8_symlink\n']
+	log = ['Channel name,SRP name,utf8_name,SNP name,Ocram database,Orbital,DVB type,symlink,utf8_symlink\n']
 	for message in messages:
-		log.append('"%s","%s","%s","%s",%i,%s,%s,%s,%s\n' % (message[0],message[1][:-4],message[2][:-4], satname(message[3]), message[4], message[5], message[6], message[7], message[8]))
+		log.append('"%s","%s",%s,"%s",%s,"%s",%i,%s,%s\n' % (message[0], message[2][:-4], message[7], message[1][:-4], message[5], satname(message[3]), message[4], message[6], message[8]))
 # end: edit 1
 	zf.writestr(outlog2 + '-all_services' + logExt, "".join(log))
 	
