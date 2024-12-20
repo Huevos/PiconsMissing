@@ -1,6 +1,12 @@
 #!/bin/sh
 
 cd meta
+
+# auto update version
+old_version=$(grep 'Version:' control)
+new_version=$(date +"%Y_%m_%d")
+sed -i "s/$old_version/Version: $new_version/g" control
+
 chmod +x postrm
 version=$(grep Version control|cut -d " " -f 2)
 package=$(grep Package control|cut -d " " -f 2)
