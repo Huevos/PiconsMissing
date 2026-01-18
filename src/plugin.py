@@ -11,6 +11,22 @@ from Screens.ChoiceBox import ChoiceBox
 from Screens.MessageBox import MessageBox
 
 
+def getPythonCommand():
+    # Try to find the correct python command
+    python_cmds = ["python", "python3", "python2"]
+    for cmd in python_cmds:
+        try:
+            # Check if python exists
+            import subprocess
+            result = subprocess.run([cmd, "--version"], capture_output=True, text=True)
+            if result.returncode == 0:
+                return cmd
+        except:
+            continue
+    # Default to python if nothing else works
+    return "python"
+
+
 def main(session, **kwargs):
     # Get picon locations
     try:
@@ -22,17 +38,17 @@ def main(session, **kwargs):
             piconLocations = searchPaths
         except:
             piconLocations = ""
-
+    
     if piconLocations:
         piconLocations = list(map(lambda x: os.path.join(x, ""), piconLocations))
-
+        
         # Create choice menu
         menu = [
             ("Search for UTF8 SNP picons only (NEW)", "utf8snp"),
             ("Search for all picon formats (original)", "all"),
             ("Cancel", "cancel")
         ]
-
+        
         session.openWithCallback(
             lambda result: runPiconSearch(session, piconLocations, result),
             ChoiceBox,
@@ -46,18 +62,19 @@ def main(session, **kwargs):
 def runPiconSearch(session, piconLocations, result):
     if result is None or result[1] == "cancel":
         return
-
+    
     plugin_dir = os.path.dirname(os.path.realpath(__file__))
-
+    python_cmd = getPythonCommand()
+    
     if result[1] == "utf8snp":
         title = "Picons Missing (UTF8 SNP only)"
         script = os.path.join(plugin_dir, "missingPiconsUTF8SNP.py")
-        command = "python %s '%s'" % (script, json.dumps(piconLocations))
+        command = "%s %s '%s'" % (python_cmd, script, json.dumps(piconLocations))
     else:  # "all" - original behavior
         title = "Picons Missing (All formats)"
         script = os.path.join(plugin_dir, "picons-missing.py")
-        command = "python %s '%s' 1" % (script, json.dumps(piconLocations))
-
+        command = "%s %s '%s' 1" % (python_cmd, script, json.dumps(piconLocations))
+    
     session.open(Console, title=title, cmdlist=[command])
 
 
