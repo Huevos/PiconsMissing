@@ -96,7 +96,7 @@ def missingPicons():
 		utf8_name = utf8_name_short + ".png"
 		newName2 = re.sub("[^a-z0-9]", "", newName1.replace("&", "and").replace("+", "plus").replace("*", "star").lower())
 		newPiconName = newName2  + ".png"
-		if int(ref[4]) < 26 and int(ref[4]) not in omit_types: # service type in decimal
+		if (int(ref[4]) < 26 or int(ref[4]) == 31) and int(ref[4]) not in omit_types: # service type in decimal
 			if name and utf8_name != "__.png" and "SID 0x" not in name and not name.replace(".", "").isdecimal():
 				messages4.append((name, sat, utf8_name, refstr2))
 				messages5.append((utf8_name_short, ocram_str))
